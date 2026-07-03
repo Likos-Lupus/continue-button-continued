@@ -5,7 +5,7 @@ A lightweight **Fabric client-side mod** that adds a compact **Continue** button
 Continue Button Continued remembers the last singleplayer world or multiplayer server you joined, then lets you jump
 back in with one click from the title screen.
 
-![Continue Button Continued screenshot](screenshot.png)
+![Continue Button Continued screenshot](https://raw.githubusercontent.com/Likos-Lupus/continue-button-continued/refs/heads/main/screenshot.png)
 
 ## Features
 
