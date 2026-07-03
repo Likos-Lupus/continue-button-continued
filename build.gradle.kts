@@ -25,10 +25,9 @@ loom {
 
 dependencies {
     minecraft(libs.minecraft)
-    mappings("net.fabricmc:yarn:${libs.versions.yarn.get()}:v2")
 
-    modImplementation(libs.fabric.loader)
-    modImplementation(libs.fabric.api)
+    implementation(libs.fabric.loader)
+    implementation(libs.fabric.api)
 }
 
 tasks.named<ProcessResources>("processResources") {
@@ -52,14 +51,14 @@ tasks.named<ProcessResources>("processResources") {
 }
 
 tasks.withType<JavaCompile>().configureEach {
-    options.release = 21
+    options.release = 25
 }
 
 java {
     withSourcesJar()
 
     toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
+        languageVersion = JavaLanguageVersion.of(25)
     }
 }
 

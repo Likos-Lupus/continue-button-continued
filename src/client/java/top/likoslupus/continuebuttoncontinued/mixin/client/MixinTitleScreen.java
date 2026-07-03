@@ -1,74 +1,133 @@
 package top.likoslupus.continuebuttoncontinued.mixin.client;
 
 import net.fabricmc.fabric.api.client.screen.v1.Screens;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.TitleScreen;
-import net.minecraft.client.gui.screen.multiplayer.ConnectScreen;
-import net.minecraft.client.gui.screen.multiplayer.MultiplayerScreen;
-import net.minecraft.client.gui.screen.world.SelectWorldScreen;
-import net.minecraft.client.gui.tooltip.Tooltip;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.network.MultiplayerServerListPinger;
-import net.minecraft.client.network.ServerAddress;
-import net.minecraft.client.network.ServerInfo;
-import net.minecraft.client.option.ServerList;
-import net.minecraft.network.NetworkingBackend;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.gui.screens.ConnectScreen;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.TitleScreen;
+import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
+import net.minecraft.client.gui.screens.worldselection.SelectWorldScreen;
+import net.minecraft.client.multiplayer.ServerData;
+import net.minecraft.client.multiplayer.ServerList;
+import net.minecraft.client.multiplayer.ServerStatusPinger;
+import net.minecraft.client.multiplayer.resolver.ServerAddress;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.network.EventLoopGroupHolder;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import top.likoslupus.continuebuttoncontinued.ContinueButtonClient;
 import top.likoslupus.continuebuttoncontinued.ContinueButtonConstants;
 
-import java.util.ArrayList;
 import java.util.stream.IntStream;
 
 @Mixin(value = TitleScreen.class, priority = 1001)
 public abstract class MixinTitleScreen extends Screen {
 
     @Unique
-    private final MultiplayerServerListPinger continueButtonContinued$serverListPinger = new MultiplayerServerListPinger();
+    private final ServerStatusPinger continueButtonContinued$serverListPinger = new ServerStatusPinger();
     @Unique
-    private ServerInfo continueButtonContinued$serverInfo;
+    private ServerData continueButtonContinued$serverData;
     @Unique
-    private boolean continueButtonContinued$firstRender = true;
-    @Unique
-    private ButtonWidget continueButtonContinued$continueButton;
+    private Button continueButtonContinued$continueButton;
     @Unique
     private Thread continueButtonContinued$serverLookupThread;
 
-    protected MixinTitleScreen(Text title) {
+    protected MixinTitleScreen(Component title) {
         super(title);
     }
 
     @Inject(
-            at = @At("HEAD"),
-            method = "addNormalWidgets(II)I"
+            method = "init",
+            at = @At("HEAD")
     )
-    private void continueButtonContinued$addContinueButton(
-            int y,
-            int spacingY,
-            CallbackInfoReturnable<Integer> cir
-    ) {
-        var tooltip = continueButtonContinued$createLocalTooltip();
+    private void continueButtonContinued$resetState(CallbackInfo ci) {
+        continueButtonContinued$serverData = null;
+        continueButtonContinued$continueButton = null;
+    }
 
-        continueButtonContinued$continueButton = this.addDrawableChild(ButtonWidget.builder(
-                        Text.translatable(ContinueButtonConstants.TRANSLATION_CONTINUE_BUTTON_TITLE),
-                        button -> continueButtonContinued$openLastTarget()
+    @Inject(
+            method = "init",
+            at = @At("TAIL")
+    )
+    private void continueButtonContinued$addContinueButton(CallbackInfo ci) {
+        var singleplayerButton = continueButtonContinued$findSingleplayerButton();
+        var y = singleplayerButton == null ? this.height / 4 + 48 : singleplayerButton.getY();
+
+        if (singleplayerButton != null) {
+            singleplayerButton.setX(this.width / 2 + 2);
+            singleplayerButton.setWidth(98);
+        }
+
+        var builder = Button.builder(
+                        Component.translatable(ContinueButtonConstants.TRANSLATION_CONTINUE_BUTTON_TITLE),
+                        _ -> continueButtonContinued$openLastTarget()
                 )
-                .dimensions(
-                        this.width / 2 - 100,
-                        y,
-                        98,
-                        20
-                )
-                .tooltip(tooltip)
-                .build());
+                .bounds(this.width / 2 - 100, y, 98, 20);
+
+        var tooltip = continueButtonContinued$createLocalTooltip();
+        if (tooltip != null) {
+            builder.tooltip(tooltip);
+        }
+
+        continueButtonContinued$continueButton = this.addRenderableWidget(builder.build());
+        continueButtonContinued$refreshLastServerInBackground();
+    }
+
+    @Unique
+    private Button continueButtonContinued$findSingleplayerButton() {
+        var singleplayerMessage = Component.translatable("menu.singleplayer");
+
+        for (var widget : Screens.getWidgets(this)) {
+            if (widget instanceof Button button
+                    && button.visible
+                    && singleplayerMessage.equals(button.getMessage())) {
+                return button;
+            }
+        }
+
+        return null;
+    }
+
+    @Unique
+    private void continueButtonContinued$openLastTarget() {
+        if (ContinueButtonClient.lastLocal) {
+            if (ContinueButtonClient.serverAddress.isEmpty()
+                    || !this.minecraft.getLevelSource().levelExists(ContinueButtonClient.serverAddress)) {
+                this.minecraft.setScreen(new SelectWorldScreen(new TitleScreen()));
+                return;
+            }
+
+            this.minecraft.createWorldOpenFlows()
+                    .openWorld(
+                            ContinueButtonClient.serverAddress,
+                            () -> this.minecraft.setScreen(new TitleScreen())
+                    );
+            return;
+        }
+
+        var server = continueButtonContinued$serverData;
+        if (server == null) {
+            server = continueButtonContinued$findServerInList();
+        }
+
+        if (server == null) {
+            ContinueButtonClient.clearSavedTarget();
+            this.minecraft.setScreen(new JoinMultiplayerScreen(new TitleScreen()));
+            return;
+        }
+
+        ConnectScreen.startConnecting(
+                new JoinMultiplayerScreen(new TitleScreen()),
+                this.minecraft,
+                ServerAddress.parseString(server.ip),
+                server,
+                false,
+                null
+        );
     }
 
     @Unique
@@ -76,96 +135,16 @@ public abstract class MixinTitleScreen extends Screen {
         if (!ContinueButtonClient.lastLocal) return null;
 
         if (ContinueButtonClient.serverAddress.isEmpty()) {
-            return Tooltip.of(Text.translatable("selectWorld.create"));
+            return Tooltip.create(Component.translatable("selectWorld.create"));
         }
 
-        return Tooltip.of(Text.translatable("menu.singleplayer")
-                .append(Text.literal(" " + ContinueButtonClient.serverName)));
-    }
-
-    @Unique
-    private void continueButtonContinued$openLastTarget() {
-        if (this.client == null) return;
-
-        if (ContinueButtonClient.lastLocal) {
-            if (ContinueButtonClient.serverAddress.isEmpty()
-                    || !this.client.getLevelStorage().levelExists(ContinueButtonClient.serverAddress)) {
-                this.client.setScreen(new SelectWorldScreen(new TitleScreen()));
-                return;
-            }
-
-            this.client.createIntegratedServerLoader()
-                    .start(
-                            ContinueButtonClient.serverAddress,
-                            () -> this.client.setScreen(new TitleScreen())
-                    );
-
-            return;
-        }
-
-        var server = continueButtonContinued$serverInfo;
-        if (server == null || ContinueButtonClient.serverAddress.isEmpty()) {
-            this.client.setScreen(new MultiplayerScreen(new TitleScreen()));
-            return;
-        }
-
-        var serverAddress = ServerAddress.parse(ContinueButtonClient.serverAddress);
-        ConnectScreen.connect(
-                new MultiplayerScreen(new TitleScreen()),
-                this.client,
-                serverAddress,
-                server,
-                true,
-                null
-        );
-    }
-
-    @Inject(
-            at = @At("HEAD"),
-            method = "init()V"
-    )
-    private void continueButtonContinued$initAtHead(CallbackInfo info) {
-        continueButtonContinued$firstRender = true;
-        continueButtonContinued$serverInfo = null;
-    }
-
-    @Inject(
-            at = @At("TAIL"),
-            method = "init()V"
-    )
-    private void continueButtonContinued$adjustVanillaButtons(CallbackInfo info) {
-        for (var button : Screens.getButtons(this)) {
-            if (button.visible && !button.getMessage()
-                    .equals(Text.translatable(ContinueButtonConstants.TRANSLATION_CONTINUE_BUTTON_TITLE))) {
-                button.setX(this.width / 2 + 2);
-                button.setWidth(98);
-                break;
-            }
-        }
-    }
-
-    @Inject(
-            at = @At("HEAD"),
-            method = "render"
-    )
-    private void continueButtonContinued$renderAtHead(
-            DrawContext context,
-            int mouseX,
-            int mouseY,
-            float delta,
-            CallbackInfo ci
-    ) {
-        if (continueButtonContinued$firstRender) {
-            continueButtonContinued$firstRender = false;
-            continueButtonContinued$refreshLastServerInBackground();
-        }
+        return Tooltip.create(Component.translatable("menu.singleplayer")
+                .append(Component.literal(" " + ContinueButtonClient.serverName)));
     }
 
     @Unique
     private void continueButtonContinued$refreshLastServerInBackground() {
-        if (ContinueButtonClient.lastLocal
-                || ContinueButtonClient.serverAddress.isEmpty()
-                || this.client == null) {
+        if (ContinueButtonClient.lastLocal || ContinueButtonClient.serverAddress.isEmpty()) {
             return;
         }
 
@@ -176,27 +155,28 @@ public abstract class MixinTitleScreen extends Screen {
 
         continueButtonContinued$serverLookupThread = new Thread(() -> {
             var serverInList = continueButtonContinued$findServerInList();
+            var minecraft = this.minecraft;
 
-            if (Thread.currentThread().isInterrupted()) {
-                return;
-            }
+            if (Thread.currentThread().isInterrupted()) return;
 
-            if (serverInList == null) {
-                ContinueButtonClient.clearSavedTarget();
-                return;
-            }
+            minecraft.execute(() -> {
+                if (serverInList == null) {
+                    ContinueButtonClient.clearSavedTarget();
+                    return;
+                }
 
-            continueButtonContinued$serverInfo = serverInList;
-            ContinueButtonClient.lastLocal = false;
-            ContinueButtonClient.serverName = serverInList.name == null
-                    ? ""
-                    : serverInList.name;
-            ContinueButtonClient.serverAddress = serverInList.address == null
-                    ? ""
-                    : serverInList.address;
-            ContinueButtonClient.saveConfig();
+                continueButtonContinued$serverData = serverInList;
+                ContinueButtonClient.lastLocal = false;
+                ContinueButtonClient.serverName = serverInList.name;
+                ContinueButtonClient.serverAddress = serverInList.ip;
+                ContinueButtonClient.saveConfig();
 
-            continueButtonContinued$pingServer(serverInList);
+                if (continueButtonContinued$continueButton != null) {
+                    continueButtonContinued$continueButton.setTooltip(continueButtonContinued$createRemoteTooltip(serverInList));
+                }
+
+                continueButtonContinued$pingServer(serverInList);
+            });
         }, "Continue Button Continued Server Lookup");
 
         continueButtonContinued$serverLookupThread.setDaemon(true);
@@ -204,9 +184,9 @@ public abstract class MixinTitleScreen extends Screen {
     }
 
     @Unique
-    private ServerInfo continueButtonContinued$findServerInList() {
-        var serverList = new ServerList(this.client);
-        serverList.loadFile();
+    private ServerData continueButtonContinued$findServerInList() {
+        var serverList = new ServerList(this.minecraft);
+        serverList.load();
 
         var exactMatch = serverList.get(ContinueButtonClient.serverAddress);
         if (exactMatch != null) {
@@ -216,80 +196,65 @@ public abstract class MixinTitleScreen extends Screen {
         return IntStream.range(0, serverList.size())
                 .mapToObj(serverList::get)
                 .filter(entry ->
-                        entry != null
-                                && entry.address != null
-                                && entry.address.equalsIgnoreCase(ContinueButtonClient.serverAddress))
+                        entry.ip.equalsIgnoreCase(ContinueButtonClient.serverAddress)
+                )
                 .findFirst()
                 .orElse(null);
     }
 
     @Unique
-    private void continueButtonContinued$pingServer(ServerInfo server) {
-        server.label = Text.translatable("multiplayer.status.pinging");
+    private Tooltip continueButtonContinued$createRemoteTooltip(ServerData server) {
+        var title = server.name.isEmpty()
+                ? Component.literal(server.ip)
+                : Component.literal(server.name);
+
+        return Tooltip.create(title.copy()
+                .append(Component.literal("\n"))
+                .append(server.motd));
+    }
+
+    @Unique
+    private void continueButtonContinued$pingServer(ServerData server) {
+        server.motd = Component.translatable("multiplayer.status.pinging");
 
         try {
-            continueButtonContinued$serverListPinger.add(
+            continueButtonContinued$serverListPinger.pingServer(
                     server,
                     () -> {
+                        if (continueButtonContinued$continueButton != null) {
+                            continueButtonContinued$continueButton.setTooltip(continueButtonContinued$createRemoteTooltip(server));
+                        }
                     },
                     () -> {
+                        if (continueButtonContinued$continueButton != null) {
+                            continueButtonContinued$continueButton.setTooltip(continueButtonContinued$createRemoteTooltip(server));
+                        }
                     },
-                    NetworkingBackend.remote(false)
+                    EventLoopGroupHolder.remote(this.minecraft.options.useNativeTransport())
             );
         } catch (Exception exception) {
-            ContinueButtonClient.LOGGER.warn("Failed to ping last server {}", server.address, exception);
+            ContinueButtonClient.LOGGER.warn("Failed to ping last server {}", server.ip, exception);
         }
     }
 
     @Inject(
-            at = @At("TAIL"),
-            method = "render"
+            method = "tick",
+            at = @At("TAIL")
     )
-    private void continueButtonContinued$renderAtTail(
-            DrawContext context,
-            int mouseX,
-            int mouseY,
-            float delta,
-            CallbackInfo ci
-    ) {
-        if (continueButtonContinued$continueButton == null
-                || !continueButtonContinued$continueButton.isHovered()) {
-            return;
-        }
-
-        if (ContinueButtonClient.lastLocal
-                || continueButtonContinued$serverInfo == null
-                || continueButtonContinued$serverInfo.label == null) {
-            return;
-        }
-
-        var tooltipLines = new ArrayList<>(this.client.textRenderer.wrapLines(continueButtonContinued$serverInfo.label, 270));
-        tooltipLines.addFirst(
-                Text.literal(continueButtonContinued$serverInfo.name)
-                        .formatted(Formatting.GRAY)
-                        .asOrderedText()
-        );
-        context.drawOrderedTooltip(this.textRenderer, tooltipLines, mouseX, mouseY);
-    }
-
-    @Inject(
-            at = @At("RETURN"),
-            method = "tick()V"
-    )
-    private void continueButtonContinued$tick(CallbackInfo info) {
+    private void continueButtonContinued$tick(CallbackInfo ci) {
         continueButtonContinued$serverListPinger.tick();
     }
 
     @Inject(
-            at = @At("RETURN"),
-            method = "removed()V"
+            method = "removed",
+            at = @At("HEAD")
     )
-    private void continueButtonContinued$removed(CallbackInfo info) {
-        continueButtonContinued$serverListPinger.cancel();
+    private void continueButtonContinued$removed(CallbackInfo ci) {
         if (continueButtonContinued$serverLookupThread != null) {
             continueButtonContinued$serverLookupThread.interrupt();
-            continueButtonContinued$serverLookupThread = null;
         }
+
+        continueButtonContinued$serverListPinger.removeAll();
     }
 
 }

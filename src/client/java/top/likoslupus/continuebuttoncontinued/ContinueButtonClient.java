@@ -3,8 +3,8 @@ package top.likoslupus.continuebuttoncontinued;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.util.WorldSavePath;
+import net.minecraft.client.Minecraft;
+import net.minecraft.world.level.storage.LevelResource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,8 +48,8 @@ public class ContinueButtonClient implements ClientModInitializer {
         var properties = loadProperties(configFile);
 
         properties.setProperty("last-local", Boolean.toString(lastLocal));
-        properties.setProperty("server-name", serverName == null ? "" : serverName);
-        properties.setProperty("server-address", serverAddress == null ? "" : serverAddress);
+        properties.setProperty("server-name", safeString(serverName));
+        properties.setProperty("server-address", safeString(serverAddress));
 
         try {
             Files.createDirectories(configFile.getParent());
@@ -84,32 +84,35 @@ public class ContinueButtonClient implements ClientModInitializer {
         return properties;
     }
 
-    private static void saveIntegratedServer(MinecraftClient client) {
-        if (client.getServer() == null) {
-            LOGGER.warn("Integrated server was expected but client server was null.");
+    private static String safeString(String value) {
+        return value == null ? "" : value;
+    }
+
+    private static void saveIntegratedServer(Minecraft minecraft) {
+        var server = minecraft.getSingleplayerServer();
+        if (server == null) {
+            LOGGER.warn("Integrated server was expected but Minecraft#getSingleplayerServer returned null.");
             return;
         }
 
         lastLocal = true;
-        serverName = client.getServer().getSaveProperties().getLevelName();
+        serverName = safeString(server.getWorldData().getLevelName());
         var pathToSave = Path.of(com.google.common.io.Files.simplifyPath(
-                client.getServer()
-                        .getSavePath(WorldSavePath.ROOT)
-                        .toString()
+                server.getWorldPath(LevelResource.ROOT).toString()
         ));
         serverAddress = pathToSave.normalize().toFile().getName();
     }
 
-    private static void saveRemoteServer(MinecraftClient client) {
-        var serverInfo = client.getCurrentServerEntry();
-        if (serverInfo == null) {
-            LOGGER.warn("Unable to save last remote server because the current server entry is null.");
+    private static void saveRemoteServer(Minecraft minecraft) {
+        var serverData = minecraft.getCurrentServer();
+        if (serverData == null) {
+            LOGGER.warn("Unable to save last remote server because Minecraft#getCurrentServer returned null.");
             return;
         }
 
         lastLocal = false;
-        serverName = serverInfo.name == null ? "" : serverInfo.name;
-        serverAddress = serverInfo.address == null ? "" : serverInfo.address;
+        serverName = safeString(serverData.name);
+        serverAddress = safeString(serverData.ip);
     }
 
     private static void migrateLegacyConfigIfNeeded() {
@@ -134,8 +137,8 @@ public class ContinueButtonClient implements ClientModInitializer {
     public void onInitializeClient() {
         loadConfig();
 
-        ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
-            if (client.isIntegratedServerRunning()) {
+        ClientPlayConnectionEvents.JOIN.register((_, _, client) -> {
+            if (client.hasSingleplayerServer()) {
                 saveIntegratedServer(client);
             } else {
                 saveRemoteServer(client);
