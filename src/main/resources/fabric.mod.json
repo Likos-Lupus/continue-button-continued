@@ -1,32 +1,33 @@
 {
-	"schemaVersion": 1,
-	"id": "continuebutton",
-	"version": "${version}",
-	"name": "Continue Button",
-	"description": "Continue the last world you played from the main screen",
-	"authors": [
-		"umollu"
-	],
-	"contact": {
-		"homepage": "https://umollu.com/",
-		"sources": "https://github.com/umollu/continue-button",
-		"issues": "https://github.com/umollu/continue-button/issues"
-	},
-	"license": "MIT",
-	"icon": "assets/continuebutton/icon.png",
-	"environment": "client",
-	"entrypoints": {
-		"client": [
-			"com.umollu.continuebutton.ContinueButtonClient"
-		]
-	},
-	"mixins": [
-		"continuebutton.client.mixins.json"
-	],
-	"depends": {
-		"fabricloader": ">=0.16.13",
-		"minecraft": "~1.21.4",
-		"java": ">=21",
-		"fabric-api": "*"
-	}
+  "schemaVersion": 1,
+  "id": "continuebuttoncontinued",
+  "version": "${version}",
+  "name": "Continue Button Continued",
+  "description": "Continue the last world or server you played from the main screen.",
+  "authors": [
+    "Likos-Lupus",
+    "Chiloven945",
+    "umollu"
+  ],
+  "contact": {
+    "sources": "https://github.com/Likos-Lupus/continue-button-continued",
+    "issues": "https://github.com/Likos-Lupus/continue-button-continued/issues"
+  },
+  "license": "MIT",
+  "icon": "assets/continuebuttoncontinued/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "top.likoslupus.continuebuttoncontinued.ContinueButtonClient"
+    ]
+  },
+  "mixins": [
+    "continuebuttoncontinued.client.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "minecraft": "~${minecraft_version}",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
 }
