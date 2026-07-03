@@ -97,14 +97,14 @@ public abstract class MixinTitleScreen extends Screen {
         if (ContinueButtonClient.lastLocal) {
             if (ContinueButtonClient.serverAddress.isEmpty()
                     || !this.minecraft.getLevelSource().levelExists(ContinueButtonClient.serverAddress)) {
-                this.minecraft.setScreen(new SelectWorldScreen(new TitleScreen()));
+                this.minecraft.setScreenAndShow(new SelectWorldScreen(new TitleScreen()));
                 return;
             }
 
             this.minecraft.createWorldOpenFlows()
                     .openWorld(
                             ContinueButtonClient.serverAddress,
-                            () -> this.minecraft.setScreen(new TitleScreen())
+                            () -> this.minecraft.setScreenAndShow(new TitleScreen())
                     );
             return;
         }
@@ -116,7 +116,7 @@ public abstract class MixinTitleScreen extends Screen {
 
         if (server == null) {
             ContinueButtonClient.clearSavedTarget();
-            this.minecraft.setScreen(new JoinMultiplayerScreen(new TitleScreen()));
+            this.minecraft.setScreenAndShow(new JoinMultiplayerScreen(new TitleScreen()));
             return;
         }
 
