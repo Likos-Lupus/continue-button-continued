@@ -63,8 +63,8 @@ build/libs/
 
 ## Credits
 
-Continue Button Continued is a continued fork of **[Continue Button](https://github.com/umollu/continue-button)** by *
-*umollu**.
+Continue Button Continued is a continued fork of **[Continue Button](https://githubcom/umollu/continue-button)** by
+**umollu**.
 
 ## License
 
