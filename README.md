@@ -1,5 +1,11 @@
 # Continue Button Continued
 
+[![Stars](https://img.shields.io/github/stars/Likos-Lupus/continue-button-continued?style=flat-square&label=Stars&labelColor=444444&color=eac54f)](https://github.com/Likos-Lupus/continue-button-continued/)
+[![Release](https://img.shields.io/github/v/release/Likos-Lupus/continue-button-continued?style=flat-square&labelColor=444444&label=Release&include_prereleases)](https://github.com/Likos-Lupus/continue-button-continued/releases)
+[![GitHub CI](https://img.shields.io/github/actions/workflow/status/Likos-Lupus/continue-button-continued/build.yml?style=flat-square&labelColor=444444&branch=main&label=GitHub%20CI)](https://github.com/Likos-Lupus/continue-button-continued/actions/workflows/build.yml)
+[![Modrinth](https://img.shields.io/badge/Modrinth-Continue%20Button%20Continued-22ff84?style=flat-square&labelColor=444444)](https://modrinth.com/mod/continue-button-continued/)
+[![CurseForge](https://img.shields.io/badge/CurseForge-Continue%20Button%20Continued-f16436?style=flat-square&labelColor=444444)](https://www.curseforge.com/minecraft/mc-mods/continue-button-continued)
+
 A lightweight **Fabric client-side mod** that adds a compact **Continue** button to Minecraft's main menu.
 
 Continue Button Continued remembers the last singleplayer world or multiplayer server you joined, then lets you jump
