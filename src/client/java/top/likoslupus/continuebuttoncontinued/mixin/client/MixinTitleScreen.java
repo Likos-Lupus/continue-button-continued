@@ -24,7 +24,10 @@ import top.likoslupus.continuebuttoncontinued.ContinueButtonConstants;
 
 import java.util.stream.IntStream;
 
-@Mixin(value = TitleScreen.class, priority = 1001)
+@Mixin(
+        value = TitleScreen.class,
+        priority = 1001
+)
 public abstract class MixinTitleScreen extends Screen {
 
     @Unique
@@ -55,7 +58,9 @@ public abstract class MixinTitleScreen extends Screen {
     )
     private void continueButtonContinued$addContinueButton(CallbackInfo ci) {
         var singleplayerButton = continueButtonContinued$findSingleplayerButton();
-        var y = singleplayerButton == null ? this.height / 4 + 48 : singleplayerButton.getY();
+        var y = singleplayerButton == null
+                ? this.height / 4 + 48
+                : singleplayerButton.getY();
 
         if (singleplayerButton != null) {
             singleplayerButton.setX(this.width / 2 + 2);
@@ -81,22 +86,23 @@ public abstract class MixinTitleScreen extends Screen {
     private Button continueButtonContinued$findSingleplayerButton() {
         var singleplayerMessage = Component.translatable("menu.singleplayer");
 
-        for (var widget : Screens.getWidgets(this)) {
-            if (widget instanceof Button button
-                    && button.visible
-                    && singleplayerMessage.equals(button.getMessage())) {
-                return button;
-            }
-        }
-
-        return null;
+        return Screens.getWidgets(this).stream()
+                .filter(widget -> widget instanceof Button button
+                        && button.visible
+                        && singleplayerMessage.equals(button.getMessage())
+                )
+                .map(widget -> (Button) widget)
+                .findFirst()
+                .orElse(null);
     }
 
     @Unique
     private void continueButtonContinued$openLastTarget() {
         if (ContinueButtonClient.lastLocal) {
             if (ContinueButtonClient.serverAddress.isEmpty()
-                    || !this.minecraft.getLevelSource().levelExists(ContinueButtonClient.serverAddress)) {
+                    || !this.minecraft.getLevelSource()
+                    .levelExists(ContinueButtonClient.serverAddress)
+            ) {
                 this.minecraft.setScreenAndShow(new SelectWorldScreen(new TitleScreen()));
                 return;
             }
@@ -132,7 +138,9 @@ public abstract class MixinTitleScreen extends Screen {
 
     @Unique
     private Tooltip continueButtonContinued$createLocalTooltip() {
-        if (!ContinueButtonClient.lastLocal) return null;
+        if (!ContinueButtonClient.lastLocal) {
+            return null;
+        }
 
         if (ContinueButtonClient.serverAddress.isEmpty()) {
             return Tooltip.create(Component.translatable("selectWorld.create"));
@@ -144,40 +152,50 @@ public abstract class MixinTitleScreen extends Screen {
 
     @Unique
     private void continueButtonContinued$refreshLastServerInBackground() {
-        if (ContinueButtonClient.lastLocal || ContinueButtonClient.serverAddress.isEmpty()) {
+        if (ContinueButtonClient.lastLocal
+                || ContinueButtonClient.serverAddress.isEmpty()
+        ) {
             return;
         }
 
         if (continueButtonContinued$serverLookupThread != null
-                && continueButtonContinued$serverLookupThread.isAlive()) {
+                && continueButtonContinued$serverLookupThread.isAlive()
+        ) {
             return;
         }
 
-        continueButtonContinued$serverLookupThread = new Thread(() -> {
-            var serverInList = continueButtonContinued$findServerInList();
-            var minecraft = this.minecraft;
+        continueButtonContinued$serverLookupThread = new Thread(
+                () -> {
+                    var serverInList = continueButtonContinued$findServerInList();
+                    var minecraft = this.minecraft;
 
-            if (Thread.currentThread().isInterrupted()) return;
+                    if (Thread.currentThread().isInterrupted()) {
+                        return;
+                    }
 
-            minecraft.execute(() -> {
-                if (serverInList == null) {
-                    ContinueButtonClient.clearSavedTarget();
-                    return;
-                }
+                    minecraft.execute(() -> {
+                        if (serverInList == null) {
+                            ContinueButtonClient.clearSavedTarget();
+                            return;
+                        }
 
-                continueButtonContinued$serverData = serverInList;
-                ContinueButtonClient.lastLocal = false;
-                ContinueButtonClient.serverName = serverInList.name;
-                ContinueButtonClient.serverAddress = serverInList.ip;
-                ContinueButtonClient.saveConfig();
+                        continueButtonContinued$serverData = serverInList;
+                        ContinueButtonClient.lastLocal = false;
+                        ContinueButtonClient.serverName = serverInList.name;
+                        ContinueButtonClient.serverAddress = serverInList.ip;
+                        ContinueButtonClient.saveConfig();
 
-                if (continueButtonContinued$continueButton != null) {
-                    continueButtonContinued$continueButton.setTooltip(continueButtonContinued$createRemoteTooltip(serverInList));
-                }
+                        if (continueButtonContinued$continueButton != null) {
+                            continueButtonContinued$continueButton.setTooltip(
+                                    continueButtonContinued$createRemoteTooltip(serverInList)
+                            );
+                        }
 
-                continueButtonContinued$pingServer(serverInList);
-            });
-        }, "Continue Button Continued Server Lookup");
+                        continueButtonContinued$pingServer(serverInList);
+                    });
+                },
+                "Continue Button Continued Server Lookup"
+        );
 
         continueButtonContinued$serverLookupThread.setDaemon(true);
         continueButtonContinued$serverLookupThread.start();
@@ -222,12 +240,16 @@ public abstract class MixinTitleScreen extends Screen {
                     server,
                     () -> {
                         if (continueButtonContinued$continueButton != null) {
-                            continueButtonContinued$continueButton.setTooltip(continueButtonContinued$createRemoteTooltip(server));
+                            continueButtonContinued$continueButton.setTooltip(
+                                    continueButtonContinued$createRemoteTooltip(server)
+                            );
                         }
                     },
                     () -> {
                         if (continueButtonContinued$continueButton != null) {
-                            continueButtonContinued$continueButton.setTooltip(continueButtonContinued$createRemoteTooltip(server));
+                            continueButtonContinued$continueButton.setTooltip(
+                                    continueButtonContinued$createRemoteTooltip(server)
+                            );
                         }
                     },
                     EventLoopGroupHolder.remote(this.minecraft.options.useNativeTransport())

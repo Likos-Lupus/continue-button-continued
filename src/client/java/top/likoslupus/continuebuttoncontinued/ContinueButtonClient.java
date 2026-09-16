@@ -85,13 +85,17 @@ public class ContinueButtonClient implements ClientModInitializer {
     }
 
     private static String safeString(String value) {
-        return value == null ? "" : value;
+        return value == null
+                ? ""
+                : value;
     }
 
     private static void saveIntegratedServer(Minecraft minecraft) {
         var server = minecraft.getSingleplayerServer();
         if (server == null) {
-            LOGGER.warn("Integrated server was expected but Minecraft#getSingleplayerServer returned null.");
+            LOGGER.warn(
+                    "Integrated server was expected but Minecraft#getSingleplayerServer returned null."
+            );
             return;
         }
 
@@ -106,7 +110,9 @@ public class ContinueButtonClient implements ClientModInitializer {
     private static void saveRemoteServer(Minecraft minecraft) {
         var serverData = minecraft.getCurrentServer();
         if (serverData == null) {
-            LOGGER.warn("Unable to save last remote server because Minecraft#getCurrentServer returned null.");
+            LOGGER.warn(
+                    "Unable to save last remote server because Minecraft#getCurrentServer returned null."
+            );
             return;
         }
 
@@ -122,14 +128,27 @@ public class ContinueButtonClient implements ClientModInitializer {
                 .resolve(ContinueButtonConstants.CONFIG_FILE_NAME);
         var newConfig = getConfigFile();
 
-        if (Files.exists(newConfig) || !Files.exists(legacyConfig)) return;
+        if (Files.exists(newConfig)
+                || !Files.exists(legacyConfig)
+        ) {
+            return;
+        }
 
         try {
             Files.createDirectories(newConfig.getParent());
             Files.copy(legacyConfig, newConfig);
-            LOGGER.info("Migrated legacy Continue Button config from {} to {}", legacyConfig, newConfig);
+            LOGGER.info(
+                    "Migrated legacy Continue Button config from {} to {}",
+                    legacyConfig,
+                    newConfig
+            );
         } catch (IOException exception) {
-            LOGGER.warn("Failed to migrate legacy Continue Button config from {} to {}", legacyConfig, newConfig, exception);
+            LOGGER.warn(
+                    "Failed to migrate legacy Continue Button config from {} to {}",
+                    legacyConfig,
+                    newConfig,
+                    exception
+            );
         }
     }
 
