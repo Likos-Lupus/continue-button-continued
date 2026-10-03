@@ -1,0 +1,35 @@
+modLoader = "javafml"
+loaderVersion = "[1,)"
+license = "MIT"
+issueTrackerURL = "https://github.com/Likos-Lupus/continue-button-continued/issues"
+
+[[mods]]
+modId = "continuebuttoncontinued"
+version = "${version}"
+displayName = "Continue Button Continued"
+description = "Continue the last world or server you played from the main screen."
+iconFile = "assets/continuebuttoncontinued/icon.png"
+credits = "Continue Button Continued is a continued fork of Continue Button by umollu."
+authors = "Likos-Lupus, Chiloven945"
+displayURL = "https://github.com/Likos-Lupus/continue-button-continued"
+
+[[dependencies.continuebuttoncontinued]]
+modId = "neoforge"
+type = "required"
+versionRange = "[${neoforge_version},)"
+ordering = "NONE"
+side = "CLIENT"
+
+[[dependencies.continuebuttoncontinued]]
+modId = "minecraft"
+type = "required"
+versionRange = "[${minecraft_version}]"
+ordering = "NONE"
+side = "CLIENT"
+
+[[dependencies.continuebuttoncontinued]]
+modId = "architectury"
+type = "required"
+versionRange = "[${architectury_version},)"
+ordering = "AFTER"
+side = "CLIENT"

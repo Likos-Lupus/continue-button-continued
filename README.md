@@ -6,10 +6,11 @@
 [![Modrinth](https://img.shields.io/badge/Modrinth-Continue%20Button%20Continued-22ff84?style=flat-square&labelColor=444444)](https://modrinth.com/mod/continue-button-continued/)
 [![CurseForge](https://img.shields.io/badge/CurseForge-Continue%20Button%20Continued-f16436?style=flat-square&labelColor=444444)](https://www.curseforge.com/minecraft/mc-mods/continue-button-continued)
 
-A lightweight **Fabric client-side mod** that adds a compact **Continue** button to Minecraft's main menu.
+A lightweight **Fabric and NeoForge client-side mod** that adds a compact **Continue** button to
+Minecraft's main menu.
 
-Continue Button Continued remembers the last singleplayer world or multiplayer server you joined, then lets you jump
-back in with one click from the title screen.
+Continue Button Continued remembers the last singleplayer world or multiplayer server you joined,
+then lets you jump back in with one click from the title screen.
 
 ![Continue Button Continued screenshot](https://raw.githubusercontent.com/Likos-Lupus/continue-button-continued/refs/heads/main/screenshot.png)
 
@@ -44,35 +45,44 @@ Older Continue Button installations used:
 .minecraft/config/continuebutton/config.properties
 ```
 
-On first launch, Continue Button Continued attempts to copy the legacy configuration into the new location so existing
-users can keep their last saved world or server.
+On first launch, Continue Button Continued attempts to copy the legacy configuration into the new
+location so existing users can keep their last saved world or server.
 
 ## Building from source
 
+This project uses [Stonecutter](https://stonecutter.kikugie.dev/) to build Fabric and NeoForge jars
+for every supported Minecraft version. Supported versions are **26.1.2**, **26.2**, and **26.3**.
+
+Build and collect every loader/version combination:
+
 ```bash
-./gradlew clean build
+./gradlew chiseledBuild
 ```
 
 On Windows:
 
 ```powershell
-.\gradlew.bat clean build
+.\gradlew.bat chiseledBuild
 ```
 
-The built mod jar will be generated in:
+The built mod jars are collected under:
 
 ```text
-build/libs/
+build/libs/<minecraft-version>-<loader>/
 ```
+
+To work on a single target, switch the active version in `stonecutter.gradle.kts` (or use
+`./gradlew "Set active project to <version>"`) and run `./gradlew build`.
 
 ## Credits
 
-Continue Button Continued is a continued fork of **[Continue Button](https://github.com/umollu/continue-button)** by
-**umollu**.
+Continue Button Continued is a continued fork of
+**[Continue Button](https://github.com/umollu/continue-button)** by **umollu**.
 
 ## License
 
 This project is licensed under the MIT License.
 
-The original Continue Button copyright notice is preserved in [`LICENSE`](https://github.com/Likos-Lupus/continue-button-continued/blob/main/LICENSE), and the continued project copyright
-notice has been added there as well.
+The original Continue Button copyright notice is preserved in [
+`LICENSE`](https://github.com/Likos-Lupus/continue-button-continued/blob/main/LICENSE), and the
+continued project copyright notice has been added there as well.
