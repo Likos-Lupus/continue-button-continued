@@ -23,6 +23,7 @@ import top.likoslupus.continuebuttoncontinued.config.ContinueButtonConfig;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import static net.minecraft.network.chat.Component.literal;
 import static net.minecraft.network.chat.Component.translatable;
@@ -63,6 +64,8 @@ public final class ContinueButtonController {
     private PingState pingState = PingState.IDLE;
     private boolean pingReachable;
     private int pingTicks;
+    private Future<?> pingFuture;
+    private long pingGeneration;
 
     public ContinueButtonController(ContinueButtonConfig config) {
         this.config = config;
@@ -192,6 +195,7 @@ public final class ContinueButtonController {
         }
 
         var target = config.serverAddress();
+        final var generation = ++pingGeneration;
         pingState = PingState.PINGING;
         pingTicks = 0;
 
@@ -203,19 +207,19 @@ public final class ContinueButtonController {
         );
         this.serverData = server;
 
-        pingExecutor.submit(() -> {
+        pingFuture = pingExecutor.submit(() -> {
             // Runs off the render thread on purpose: DNS + TCP connect block.
             try {
                 pinger.pingServer(
                         server,
                         () -> {
                         },
-                        () -> Minecraft.getInstance().execute(this::onPong),
+                        () -> Minecraft.getInstance().execute(() -> onPong(generation)),
                         EventLoopGroupHolder.remote(Minecraft.getInstance().options.useNativeTransport())
                 );
             } catch (Exception exception) {
                 LOGGER.warn("Could not reach the last server {}", target);
-                Minecraft.getInstance().execute(this::failPing);
+                Minecraft.getInstance().execute(() -> failPing(generation));
             }
         });
     }
@@ -242,14 +246,18 @@ public final class ContinueButtonController {
                 );
     }
 
-    private void onPong() {
+    private void onPong(long generation) {
+        if (generation != pingGeneration) {
+            return;
+        }
+
         pingState = PingState.DONE;
         pingReachable = true;
         updateRemoteTooltip();
     }
 
-    private void failPing() {
-        if (pingState == PingState.DONE) {
+    private void failPing(long generation) {
+        if (generation != pingGeneration || pingState == PingState.DONE) {
             return;
         }
 
@@ -297,7 +305,7 @@ public final class ContinueButtonController {
         if (pingState == PingState.PINGING) {
             pingTicks++;
             if (pingTicks > PING_TIMEOUT_TICKS || hasPingFailed()) {
-                failPing();
+                failPing(pingGeneration);
             }
         }
     }
@@ -310,6 +318,13 @@ public final class ContinueButtonController {
     }
 
     public void dispose() {
+        // Invalidate any in-flight ping so its callbacks cannot mutate a later screen's state.
+        pingGeneration++;
+        if (pingFuture != null) {
+            pingFuture.cancel(false);
+            pingFuture = null;
+        }
+
         pinger.removeAll();
         this.screen = null;
         this.continueButton = null;
