@@ -1,0 +1,4 @@
+# loom-back-compat: which Loom implementation to use.
+loomx.loom_version = "1.17.493"
+loomx.loom_unobf_plugin = "dev.architectury.loom-no-remap"
+loomx.loom_remap_plugin = "dev.architectury.loom-remap"

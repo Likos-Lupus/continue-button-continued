@@ -14,7 +14,7 @@ jobs:
         uses: gradle/actions/wrapper-validation@v6
 
       - name: Setup JDK 25
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6
         with:
           java-version: '25'
           distribution: 'temurin'
@@ -26,7 +26,7 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: Build
-        run: ./gradlew build --stacktrace
+        run: ./gradlew chiseledBuild --stacktrace
 
       - name: Capture build artifacts
         uses: actions/upload-artifact@v7
